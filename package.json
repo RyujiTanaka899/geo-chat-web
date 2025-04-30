@@ -1,16 +1,13 @@
 {
   "name": "geo-chat-web",
   "version": "1.0.0",
+  "private": true,
   "scripts": {
     "dev:frontend": "pnpm --filter frontend dev",
     "dev:backend":  "pnpm --filter backend dev",
-    "dev": "vite --host 0.0.0.0"
+    "build:frontend": "pnpm --filter frontend build",
+    "start:backend": "pnpm --filter backend start",
+    "dev": "pnpm dev:backend & pnpm dev:frontend"
   },
-  "description": "",
-  "main": "index.js",
-
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "packageManager": "pnpm@10.9.0"
 }
