@@ -1,2 +1,5 @@
 [project]
 workspace = "backend"
+
+[phases.install]
+command = ["pnpm", "install", "--no-frozen-lockfile"]
