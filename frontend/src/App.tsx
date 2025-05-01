@@ -1,36 +1,50 @@
-import { useState, useEffect } from 'react';
-import { useLocation } from './hooks/useLocation';
-import { ChatRoom } from './components/ChatRoom';
-import { NicknameForm } from './components/NicknameForm';
-import './App.css';
+// App.tsx
+import { useState, useEffect } from 'react'
+import { useLocation } from './hooks/useLocation'
+import { NicknameForm } from './components/NicknameForm'
+import { ChatRoom } from './components/ChatRoom'
+import './App.css'
 
 function App() {
-  // 位置フックは常に呼び出す
-  const loc = useLocation();
-
-  // ニックネーム管理
-  const [nickname, setNickname] = useState<string | null>(null);
+  const loc = useLocation()
+  const [roomId, setRoomId] = useState<string>('')
+  const [nickname, setNickname] = useState<string>('')    // ← ここで管理
 
   useEffect(() => {
-    const stored = localStorage.getItem('geoChatNickname');
-    if (stored) setNickname(stored);
-  }, []);
+    if (loc.isRiding && !roomId) {
+      setRoomId(loc.roomId)
+    } else if (!loc.isRiding) {
+      setRoomId('')
+      setNickname('')  // 乗車→降車でリセットしておくと再入力できる
+    }
+  }, [loc.isRiding, loc.roomId, roomId])
 
-  // ニックネーム未設定時は入力フォームを表示
-  if (!nickname) {
-    return <NicknameForm onSubmit={setNickname} />;
+  // まだルームにも入ってなくて候補もなければ「検出中」を表示
+  if (!loc.isRiding || !roomId) {
+    return <p>乗車検出中…速度: {loc.speed.toFixed(1)} m/s</p>
   }
 
-  // 乗車判定に応じてチャット画面のマウント/アンマウントを行い、自動退出ロジックを実現
+  // ルームIDはあるけど、ニックネーム未入力ならフォームを出す
+  if (!nickname) {
+    return (
+      <div className="App">
+        <p>Room: {roomId}</p>
+        <NicknameForm
+          current=""
+          onSubmit={(newName) => setNickname(newName)}
+        />
+      </div>
+    )
+  }
+
+  // ルームID と ニックネームが揃ったらチャット画面へ
   return (
-    <div className="App">
-      {loc.isRiding ? (
-        <ChatRoom roomId={loc.roomId} />
-      ) : (
-        <p>乗車検出中…速度: {loc.speed.toFixed(1)} m/s</p>
-      )}
-    </div>
-  );
+    <ChatRoom
+      roomId={roomId}
+      nickname={nickname}
+      onNicknameChange={(newName) => setNickname(newName)}  // ← ここで渡す
+    />
+  )
 }
 
-export default App;
+export default App

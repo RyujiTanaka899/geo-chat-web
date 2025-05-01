@@ -41,7 +41,7 @@ function bearing(lat1: number, lon1: number, lat2: number, lon2: number): number
 
 /**
  * カスタムフック：1秒ごとに Geolocation API で位置を取得し、
- * 速度閾値で乗車判定、ジオハッシュ＋方位から roomId を生成
+ * 停車猶予を持つ速度閾値で乗車判定、ジオハッシュ＋方位から roomId を生成
  */
 export function useLocation(): LocationState {
   const [loc, setLoc] = useState<LocationState>({
@@ -55,8 +55,13 @@ export function useLocation(): LocationState {
 
   // 前回の位置と時刻を保持
   const prevRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
+  // 停車時の猶予タイマーを保持
+  const stopTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    const THRESHOLD = 2;       // 2 m/s ≒ 7.2 km/h
+    const GRACE = 30 * 1000;   // 停車猶予：30秒
+
     const intervalId = window.setInterval(() => {
       navigator.geolocation.getCurrentPosition(
         ({ coords }) => {
@@ -82,11 +87,31 @@ export function useLocation(): LocationState {
             );
           }
 
-          // 次回計算用に保存
           prevRef.current = { lat: latitude, lng: longitude, time: now };
 
-          const riding = speed > 2; // 2 m/s ≒ 7.2 km/h
-          //const riding = true;  //デバック用
+          // 乗車判定（ヒステリシス付き）
+          let nextIsRiding = loc.isRiding;
+          if (speed > THRESHOLD) {
+            // 走行中は即座に乗車中
+            if (stopTimeout.current) {
+              clearTimeout(stopTimeout.current);
+              stopTimeout.current = null;
+            }
+            nextIsRiding = true;
+          } else if (loc.isRiding) {
+            // すでに乗車中で速度が下回った場合、猶予タイマーをセット
+            if (!stopTimeout.current) {
+              stopTimeout.current = setTimeout(() => {
+                setLoc(prev => ({ ...prev, isRiding: false }));
+                stopTimeout.current = null;
+              }, GRACE);
+            }
+            nextIsRiding = true;
+          } else {
+            // それ以外は非乗車
+            nextIsRiding = false;
+          }
+
           const gh = encode(latitude, longitude);
           const dir = Math.floor(head / 45) * 45; // 8方向量子化
 
@@ -96,7 +121,7 @@ export function useLocation(): LocationState {
             speed,
             heading: head,
             roomId: `${gh}_${dir}`,
-            isRiding: riding,
+            isRiding: nextIsRiding,
           });
         },
         (err) => console.error('位置取得エラー', err.code, err.message),
@@ -107,8 +132,12 @@ export function useLocation(): LocationState {
     return () => {
       clearInterval(intervalId);
       prevRef.current = null;
+      if (stopTimeout.current) {
+        clearTimeout(stopTimeout.current);
+      }
     };
-  }, []);
+  // loc.isRiding を参照してヒステリシスを効かせる
+  }, [loc.isRiding]);
 
   return loc;
 }

@@ -1,36 +1,35 @@
-// frontend/src/components/NicknameForm.tsx
+// components/NicknameForm.tsx
 import { useState } from 'react';
 
-interface Props {
-  onSubmit: (nickname: string) => void;
+interface NicknameFormProps {
+  /** 決定時に親コンポーネントに渡す */
+  onSubmit: (name: string) => void;
+  /** プレースホルダーや初期値が欲しければ追加してもOK */
 }
 
-export function NicknameForm({ onSubmit }: Props) {
-  const [value, setValue] = useState('');
+export function NicknameForm({ onSubmit }: NicknameFormProps) {
+  const [input, setInput] = useState('');
 
-  const handle = () => {
-    // 空文字なら自動生成
-    const nick = value.trim() || `User${Math.floor(Math.random() * 1000)}`;
-    localStorage.setItem('geoChatNickname', nick);
-    onSubmit(nick);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = input.trim();
+    if (!name) return;
+    onSubmit(name);
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
+    <form onSubmit={handleSubmit} className="flex flex-col items-center mt-20">
       <h1 className="text-2xl font-bold mb-4">ニックネームを入力してください</h1>
       <input
         type="text"
-        value={value}
-        onChange={e => setValue(e.target.value)}
+        value={input}
+        onChange={e => setInput(e.target.value)}
         placeholder="例：Taro123"
-        className="border p-2 rounded w-64 mb-4"
+        className="border rounded px-2 py-1 mb-4"
       />
-      <button
-        onClick={handle}
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-      >
+      <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
         決定
       </button>
-    </div>
+    </form>
   );
 }
