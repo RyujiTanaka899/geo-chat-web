@@ -17,7 +17,7 @@ interface ChatRoomProps {
 }
 
 export function ChatRoom({ roomId, nickname, onNicknameChange }: ChatRoomProps) {
-  const socket = useSocket(roomId, nickname)
+  const socket = useSocket(roomId)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [isEditing, setIsEditing] = useState(false)
